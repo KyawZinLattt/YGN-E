@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group B Schedule</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .date-picker {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+        .schedule {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .shift {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4ff;
+            border-radius: 3px;
+        }
+        .day-type {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Group B Schedule</h1>
+    
+    <div class="date-picker">
+        <input type="date" id="dateInput" value="">
+        <button onclick="showCurrentDate()">Show Today</button>
+    </div>
+
+    <div id="scheduleDisplay" class="schedule"></div>
+
+    <script>
+        const START_DATE = new Date('2024-03-24');
+        const SCHEDULE = {
+            1: [
+                { start: '5:00 AM', end: '9:00 AM' },
+                { start: '5:00 PM', end: '9:00 PM' },
+                { start: '1:00 AM', end: '5:00 AM', nextDay: true }
+            ],
+            2: [
+                { start: '1:00 PM', end: '5:00 PM' },
+                { start: '1:00 AM', end: '5:00 AM', nextDay: true }
+            ],
+            3: [
+                { start: '9:00 AM', end: '1:00 PM' },
+                { start: '9:00 PM', end: '1:00 AM' }
+            ]
+        };
+
+        function getDayType(date) {
+            const diffTime = date - START_DATE;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const dayType = (diffDays % 3) + 1;
+            return dayType > 0 ? dayType : 3;
+        }
+
+        function formatShift(shift, currentDate) {
+            const nextDay = new Date(currentDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            
+            return shift.start + ' - ' + shift.end + 
+                (shift.nextDay ? ` (${nextDay.toLocaleDateString()})` : '');
+        }
+
+        function displaySchedule(date) {
+            const scheduleDiv = document.getElementById('scheduleDisplay');
+            if (date < START_DATE) {
+                scheduleDiv.innerHTML = `<p>No schedule available before ${START_DATE.toLocaleDateString()}</p>`;
+                return;
+            }
+
+            const dayType = getDayType(date);
+            const shifts = SCHEDULE[dayType];
+            
+            let html = `<h2>${date.toLocaleDateString()}</h2>`;
+            html += `<div class="day-type">Day ${dayType} Schedule</div>`;
+            
+            shifts.forEach(shift => {
+                html += `
+                    <div class="shift">
+                        ${formatShift(shift, date)}
+                    </div>
+                `;
+            });
+            
+            scheduleDiv.innerHTML = html;
+        }
+
+        function showCurrentDate() {
+            const today = new Date();
+            document.getElementById('dateInput').valueAsDate = today;
+            displaySchedule(today);
+        }
+
+        // Initial setup
+        document.getElementById('dateInput').valueAsDate = new Date();
+        document.getElementById('dateInput').addEventListener('change', function(e) {
+            displaySchedule(new Date(e.target.value));
+        });
+
+        // Show schedule for current date on load
+        window.onload = showCurrentDate;
+    </script>
+</body>
+</html>
