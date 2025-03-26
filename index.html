@@ -3,128 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group B Schedule</title>
+    <title>Dynamic Schedule Table</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .date-picker {
-            margin: 20px 0;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 5px;
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
         }
-        .schedule {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .shift {
-            margin: 10px 0;
-            padding: 10px;
-            background: #e8f4ff;
-            border-radius: 3px;
-        }
-        .day-type {
-            color: #666;
-            font-size: 0.9em;
+        .green {
+            background-color: green;
+            color: white;
         }
     </style>
 </head>
 <body>
-    <h1>Group B Schedule</h1>
-    
-    <div class="date-picker">
-        <input type="date" id="dateInput">
-        <button onclick="showCurrentDate()">Show Today</button>
-    </div>
-
-    <div id="scheduleDisplay" class="schedule"></div>
-
+    <h1>Dynamic Schedule Table</h1>
+    <label for="startDate">Select Start Date:</label>
+    <input type="date" id="startDate">
+    <button onclick="generateTable()">Generate Table</button>
+    <table id="scheduleTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>5am - 9am</th>
+                <th>9am - 1pm</th>
+                <th>1pm - 5pm</th>
+                <th>5pm - 9pm</th>
+                <th>9pm - 1am</th>
+                <th>1am - 5am</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Table rows will be generated here -->
+        </tbody>
+    </table>
     <script>
-        // UTC-based configuration (March 24, 2024)
-        const START_YEAR = 2024;
-        const START_MONTH = 2; // March is 2 (0-indexed)
-        const START_DAY = 24;
-
-        const SCHEDULE = {
-            1: [
-                { start: '5:00 AM', end: '9:00 AM' },
-                { start: '5:00 PM', end: '9:00 PM' },
-                { start: '1:00 AM', end: '5:00 AM', nextDay: true }
-            ],
-            2: [
-                { start: '1:00 PM', end: '5:00 PM' },
-                { start: '1:00 AM', end: '5:00 AM', nextDay: true }
-            ],
-            3: [
-                { start: '9:00 AM', end: '1:00 PM' },
-                { start: '9:00 PM', end: '1:00 AM' }
-            ]
-        };
-
-        function getDayType(date) {
-            // Convert both dates to UTC midnight
-            const startDate = Date.UTC(START_YEAR, START_MONTH, START_DAY);
-            const inputDate = Date.UTC(
-                date.getUTCFullYear(),
-                date.getUTCMonth(),
-                date.getUTCDate()
-            );
-            
-            const diffDays = Math.floor((inputDate - startDate) / (1000 * 60 * 60 * 24));
-            const dayType = ((diffDays % 3 + 3) % 3) + 1; // Always returns 1, 2, or 3
-            return dayType;
-        }
-
-        function formatShift(shift, currentDate) {
-            if (!shift.nextDay) return `${shift.start} - ${shift.end}`;
-            
-            const nextDay = new Date(currentDate);
-            nextDay.setDate(nextDay.getDate() + 1);
-            return `${shift.start} - ${shift.end} (${nextDay.toLocaleDateString()})`;
-        }
-
-        function displaySchedule(date) {
-            const scheduleDiv = document.getElementById('scheduleDisplay');
-            const startDate = new Date(Date.UTC(START_YEAR, START_MONTH, START_DAY));
-            
-            if (date < startDate) {
-                scheduleDiv.innerHTML = `<p>Schedule starts on ${startDate.toLocaleDateString()}</p>`;
+        function generateTable() {
+            const startDateInput = document.getElementById('startDate').value;
+            if (!startDateInput) {
+                alert('Please select a start date.');
                 return;
             }
 
-            const dayType = getDayType(date);
-            const shifts = SCHEDULE[dayType];
-            
-            let html = `<h2>${date.toLocaleDateString()}</h2>`;
-            html += `<div class="day-type">Day ${dayType} Schedule</div>`;
-            
-            shifts.forEach(shift => {
-                html += `<div class="shift">${formatShift(shift, date)}</div>`;
-            });
-            
-            scheduleDiv.innerHTML = html;
+            const startDate = new Date(startDateInput);
+            const tableBody = document.getElementById('scheduleTable').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            for (let i = 0; i < 14; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                const formattedDate = currentDate.toISOString().split('T')[0];
+
+                const row = document.createElement('tr');
+                const dateCell = document.createElement('td');
+                dateCell.textContent = formattedDate;
+                row.appendChild(dateCell);
+
+                for (let j = 0; j < 6; j++) {
+                    const cell = document.createElement('td');
+                    if (shouldHighlightCell(i, j, startDate)) {
+                        cell.classList.add('green');
+                    }
+                    row.appendChild(cell);
+                }
+
+                tableBody.appendChild(row);
+            }
         }
 
-        function showCurrentDate() {
-            const today = new Date();
-            document.getElementById('dateInput').valueAsDate = today;
-            displaySchedule(today);
+        function shouldHighlightCell(dayIndex, timeSlotIndex, startDate) {
+            const pattern = [
+                [0, 3], // Day 1: 5am - 9am, 5pm - 9pm
+                [5, 2], // Day 2: 1am - 5am, 1pm - 5pm
+                [5, 1, 4] // Day 3: 1am - 5am, 9am - 1pm, 9pm - 1am
+            ];
+
+            const baseDate = new Date('2025-03-24');
+            const diffDays = Math.floor((startDate - baseDate) / (1000 * 60 * 60 * 24));
+            const patternIndex = (diffDays + dayIndex) % 3;
+
+            if (timeSlotIndex === 5) { // 1am - 5am
+                const nextDayPatternIndex = (patternIndex + 1) % 3;
+                return pattern[nextDayPatternIndex].includes(timeSlotIndex);
+            }
+
+            return pattern[patternIndex].includes(timeSlotIndex);
         }
-
-        // Initialize date picker
-        document.getElementById('dateInput').valueAsDate = new Date();
-        document.getElementById('dateInput').addEventListener('change', function(e) {
-            displaySchedule(new Date(e.target.value));
-        });
-
-        // Show initial schedule
-        window.onload = showCurrentDate;
     </script>
 </body>
 </html>
