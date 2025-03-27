@@ -118,9 +118,10 @@
                 dateCell.setAttribute('data-label', 'Date');
                 row.appendChild(dateCell);
 
-                let toggle = i % 3 === 0; // Start with "A" for even days and "C" for odd days
+                
                 const diffDays = Math.floor((currentDate - baseDate) / (1000 * 60 * 60 * 24));
                 const dayPatternIndex = diffDays % 3; // Determine the day pattern (0, 1, 2)
+                let toggle = dayPatternIndex % 3 === 0; // Start with "A" for even days and "C" for odd days
 
                 for (let j = 0; j < 6; j++) {
                     const cell = document.createElement('td');
