@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Schedule Table</title>
+    <title>YGN EPC Schedule</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,7 +68,7 @@
     </style>
 </head>
 <body>
-    <h1>YGN East Group B</h1>
+    <h1>YGN EPC Schedule</h1>
     <label for="startDate">Select Start Date:</label>
     <input type="date" id="startDate">
     <button onclick="generateTable()">Generate Table</button>
@@ -103,6 +103,7 @@
             }
 
             const startDate = new Date(startDateInput);
+            const baseDate = new Date('2025-03-24'); // Base date for determining the pattern
             const tableBody = document.getElementById('scheduleTable').querySelector('tbody');
             tableBody.innerHTML = '';
 
@@ -117,11 +118,28 @@
                 dateCell.setAttribute('data-label', 'Date');
                 row.appendChild(dateCell);
 
+                let toggle = i % 3 === 0; // Start with "A" for even days and "C" for odd days
+                const diffDays = Math.floor((currentDate - baseDate) / (1000 * 60 * 60 * 24));
+                const dayPatternIndex = diffDays % 3; // Determine the day pattern (0, 1, 2)
+
                 for (let j = 0; j < 6; j++) {
                     const cell = document.createElement('td');
                     cell.setAttribute('data-label', getTimeSlotLabel(j));
                     if (shouldHighlightCell(i, j, startDate)) {
                         cell.classList.add('green');
+                        if (j === 5) { // Apply the pattern for column "1am - 5am" green cells
+                            const pattern = ['A & C', 'A & B', 'B & C'];
+                            cell.textContent = pattern[dayPatternIndex];
+                        } else {
+                            cell.textContent = 'B'; // Fill other green cells with "B"
+                        }
+                        toggle = false; // Ensure the next blank cell is "C"
+                    } else if (j === 5) { // Custom pattern for column "1am - 5am"
+                        const pattern = ['A & C', 'A & B', 'B & C'];
+                        cell.textContent = pattern[dayPatternIndex];
+                    } else { // Fill blank cells with "A" and "C", excluding the last cell
+                        cell.textContent = toggle ? 'A' : 'C';
+                        toggle = !toggle;
                     }
                     row.appendChild(cell);
                 }
@@ -131,10 +149,23 @@
         }
 
         function shouldHighlightCell(dayIndex, timeSlotIndex, startDate) {
+            /*
+            0 - '5am - 9am',
+            1 - '9am - 1pm',
+            2 - '1pm - 5pm',
+            3 - '5pm - 9pm',
+            4 - '9pm - 1am',
+            5 - '1am - 5am'
             const pattern = [
                 [0, 3], // Day 1: 5am - 9am, 5pm - 9pm
                 [5, 2], // Day 2: 1am - 5am, 1pm - 5pm
                 [5, 1, 4] // Day 3: 1am - 5am, 9am - 1pm, 9pm - 1am
+            ];
+            */
+            const pattern = [
+                [5, 1, 4], // Day 3: 1am - 5am, 9am - 1pm, 9pm - 1am
+                [0, 3], // Day 1: 5am - 9am, 5pm - 9pm
+                [5, 2] // Day 2: 1am - 5am, 1pm - 5pm
             ];
 
             const baseDate = new Date('2025-03-24');
