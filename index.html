@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>YGN-E Plan A & B Schedule</title>
+    <title>Plan A & B Schedule Table</title>
     <style>
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #aaa; padding: 8px; text-align: center; }
@@ -11,18 +11,25 @@
 </head>
 <body>
     <h2>Plan A & B Schedule Table</h2>
+    <label for="schedule-date">Select start date: </label>
+    <input type="date" id="schedule-date">
+    <br><br>
     <div id="schedule-table"></div>
     <script>
         function formatDate(date) {
             return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
-        function generateScheduleTable() {
+        function generateScheduleTable(selectedDate) {
             const startDate = new Date(2025, 6, 1); // July is month 6 (0-based)
-            const today = new Date();
-            today.setHours(0,0,0,0);
+            let baseDate;
+            if (selectedDate) {
+                baseDate = new Date(selectedDate);
+            } else {
+                baseDate = new Date();
+            }
+            baseDate.setHours(0,0,0,0);
 
-            // Always generate schedule for current date and next 13 days
             const periods = [
                 "5am - 9am",
                 "9am - 1pm",
@@ -37,21 +44,18 @@
             html += '</tr></thead><tbody>';
 
             for (let i = 0; i < 14; i++) {
-                const rowDate = new Date(today);
-                rowDate.setDate(today.getDate() + i);
+                const rowDate = new Date(baseDate);
+                rowDate.setDate(baseDate.getDate() + i);
 
                 // Calculate offset from 1st July 2025
                 const diffDays = Math.floor((rowDate - startDate) / (1000*60*60*24));
-                // If before 1st July 2025, skip row (optional: you can skip or show blank)
                 if (diffDays < 0) {
                     html += `<tr><td>${formatDate(rowDate)}</td><td colspan="6">No schedule</td></tr>`;
                     continue;
                 }
 
-                // July 1, 2025 is Plan B first, then alternate each day
                 const isBFirst = diffDays % 2 === 0;
 
-                // For each period, alternate A/B starting from 5am-9am
                 let plans = [];
                 let current = isBFirst ? 'B' : 'A';
                 for (let j = 0; j < periods.length - 1; j++) {
@@ -63,8 +67,8 @@
                 html += `<tr><td>${formatDate(rowDate)}</td>`;
                 for (let plan of plans) {
                     let style = '';
-                    if (plan === 'A') style = ' style="background:#fff9c4"'; // light yellow
-                    else if (plan === 'B') style = ' style="background:#bbdefb"'; // light blue
+                    if (plan === 'A') style = ' style="background:#fff9c4"';
+                    else if (plan === 'B') style = ' style="background:#bbdefb"';
                     html += `<td${style}>${plan}</td>`;
                 }
                 html += '</tr>';
@@ -74,7 +78,16 @@
             document.getElementById('schedule-table').innerHTML = html;
         }
 
-        generateScheduleTable();
+        // Set default value for date input to today
+        const dateInput = document.getElementById('schedule-date');
+        const todayStr = new Date().toISOString().split('T')[0];
+        dateInput.value = todayStr;
+
+        dateInput.addEventListener('change', function() {
+            generateScheduleTable(this.value);
+        });
+
+        generateScheduleTable(dateInput.value);
     </script>
 </body>
 </html>
