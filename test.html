@@ -353,13 +353,30 @@
         .notification .content {
             padding-right: 20px;
         }
+        
+        .connection-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .ice-servers {
+            font-size: 0.8rem;
+            color: #a0a0d0;
+            max-width: 60%;
+            overflow-wrap: break-word;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Browser-to-Browser Data Sync</h1>
-            <p class="subtitle">Store data in your browser's localStorage and sync it with other devices using peer-to-peer WebRTC connections</p>
+            <p class="subtitle">Sync data across devices using WebRTC peer connections</p>
         </header>
         
         <div class="card">
@@ -417,6 +434,13 @@
                 <div id="statusIndicator" class="status-indicator status-disconnected"></div>
                 <span id="statusText" class="status-text">Disconnected</span>
             </div>
+            
+            <div class="connection-details">
+                <div class="ice-servers">
+                    <strong>Using STUN:</strong> stun.l.google.com:19302
+                </div>
+                <div id="connectionCount">Connections: 0</div>
+            </div>
         </div>
         
         <div class="card">
@@ -433,7 +457,7 @@
                 <li>Enter data and click "Save & Sync" to store locally and send to connected devices</li>
                 <li>All connected devices will automatically update with the latest data</li>
             </ol>
-            <p>Note: Data is stored in your browser's localStorage and synced via peer-to-peer connection</p>
+            <p>Data is stored in your browser's localStorage and synced via peer-to-peer WebRTC connection</p>
         </div>
     </div>
     
@@ -460,10 +484,11 @@
         const notification = document.getElementById('notification');
         const notificationContent = document.getElementById('notificationContent');
         const closeBtn = document.querySelector('.close-btn');
+        const connectionCount = document.getElementById('connectionCount');
         
         // PeerJS variables
         let peer = null;
-        let conn = null;
+        let connections = [];
         let currentPeerId = null;
         
         // Show notification
@@ -497,16 +522,16 @@
                 currentPeerId = id;
                 yourPeerIdDisplay.textContent = id;
                 updateConnectionStatus('disconnected');
+                showNotification('Your Peer ID is ready!');
             });
             
             peer.on('connection', (connection) => {
-                // Close existing connection if any
-                if (conn) conn.close();
+                connections.push(connection);
+                updateConnectionStatus('connected');
+                showNotification(`New connection from ${connection.peer.substring(0, 8)}...`);
+                updateConnectionCount();
                 
-                conn = connection;
-                setupConnectionHandlers();
-                updateConnectionStatus('connected', `Connected to ${conn.peer}`);
-                showNotification(`Connected to ${conn.peer.substring(0, 10)}...`);
+                setupConnectionHandlers(connection);
             });
             
             peer.on('error', (err) => {
@@ -534,14 +559,14 @@
         }
         
         // Set up connection handlers
-        function setupConnectionHandlers() {
-            conn.on('open', () => {
-                updateConnectionStatus('connected', `Connected to ${conn.peer}`);
+        function setupConnectionHandlers(connection) {
+            connection.on('open', () => {
+                updateConnectionStatus('connected', `${connections.length} connection(s)`);
                 // Send our current data when connection opens
-                sendLocalStorageData();
+                sendLocalStorageData(connection);
             });
             
-            conn.on('data', (data) => {
+            connection.on('data', (data) => {
                 if (data.type === 'sync') {
                     // Update localStorage with received data
                     localStorage.setItem(data.key, data.value);
@@ -562,17 +587,23 @@
                 }
             });
             
-            conn.on('close', () => {
-                updateConnectionStatus('disconnected');
-                conn = null;
-                showNotification('Connection closed');
+            connection.on('close', () => {
+                connections = connections.filter(conn => conn.peer !== connection.peer);
+                updateConnectionStatus(connections.length > 0 ? 'connected' : 'disconnected');
+                showNotification(`Connection closed: ${connection.peer.substring(0, 8)}...`);
+                updateConnectionCount();
             });
             
-            conn.on('error', (err) => {
+            connection.on('error', (err) => {
                 console.error('Connection error:', err);
                 updateConnectionStatus('error', `Connection error: ${err}`);
                 showNotification(`Connection error: ${err}`, 5000);
             });
+        }
+        
+        // Update connection count
+        function updateConnectionCount() {
+            connectionCount.textContent = `Connections: ${connections.length}`;
         }
         
         // Update connection status UI
@@ -586,7 +617,7 @@
                     break;
                 case 'connected':
                     statusIndicator.classList.add('status-connected');
-                    statusText.textContent = message || 'Connected';
+                    statusText.textContent = message || `${connections.length} connection(s)`;
                     break;
                 case 'disconnected':
                     statusIndicator.classList.add('status-disconnected');
@@ -607,29 +638,37 @@
                 return;
             }
             
-            // Close existing connection if any
-            if (conn) conn.close();
+            // Check if we're already connected to this peer
+            if (connections.some(conn => conn.peer === remotePeerId)) {
+                showNotification('Already connected to this peer', 3000);
+                return;
+            }
             
-            updateConnectionStatus('connecting', `Connecting to ${remotePeerId}...`);
-            showNotification(`Connecting to ${remotePeerId.substring(0, 10)}...`);
+            updateConnectionStatus('connecting', `Connecting to ${remotePeerId.substring(0, 8)}...`);
+            showNotification(`Connecting to ${remotePeerId.substring(0, 8)}...`);
             
             // Connect to remote peer
-            conn = peer.connect(remotePeerId, {
+            const connection = peer.connect(remotePeerId, {
                 reliable: true,
                 serialization: 'json'
             });
             
-            setupConnectionHandlers();
+            connections.push(connection);
+            setupConnectionHandlers(connection);
+            updateConnectionCount();
         }
         
-        // Disconnect from peer
+        // Disconnect from all peers
         function disconnectFromPeer() {
-            if (conn) {
-                conn.close();
-                conn = null;
+            if (connections.length > 0) {
+                connections.forEach(conn => conn.close());
+                connections = [];
+                updateConnectionStatus('disconnected');
+                showNotification('Disconnected from all peers');
+                updateConnectionCount();
+            } else {
+                showNotification('No active connections', 3000);
             }
-            updateConnectionStatus('disconnected');
-            showNotification('Disconnected');
         }
         
         // Save data to localStorage only
@@ -666,15 +705,19 @@
             loadAndDisplayData();
             
             // Sync to connected peers
-            if (conn && conn.open) {
-                conn.send({
-                    type: 'sync',
-                    key: key,
-                    value: value
+            if (connections.length > 0) {
+                connections.forEach(conn => {
+                    if (conn.open) {
+                        conn.send({
+                            type: 'sync',
+                            key: key,
+                            value: value
+                        });
+                    }
                 });
-                showNotification(`Synced: ${key}`);
+                showNotification(`Synced to ${connections.length} device(s): ${key}`);
             } else {
-                showNotification('Saved locally but no connection to sync', 3000);
+                showNotification('Saved locally but no connections to sync', 3000);
             }
             
             // Clear input fields
@@ -682,9 +725,9 @@
             dataValueInput.value = '';
         }
         
-        // Send entire localStorage to connected peer
-        function sendLocalStorageData() {
-            if (!conn || !conn.open) return;
+        // Send entire localStorage to a specific connection
+        function sendLocalStorageData(connection) {
+            if (!connection || !connection.open) return;
             
             const allData = {};
             for (let i = 0; i < localStorage.length; i++) {
@@ -692,12 +735,10 @@
                 allData[key] = localStorage.getItem(key);
             }
             
-            conn.send({
+            connection.send({
                 type: 'fullSync',
                 data: allData
             });
-            
-            showNotification('Sent full data to connected peer');
         }
         
         // Clear all data
@@ -708,9 +749,13 @@
                 showNotification('All data cleared');
                 
                 // Also send clear command to connected peers
-                if (conn && conn.open) {
-                    conn.send({
-                        type: 'clear'
+                if (connections.length > 0) {
+                    connections.forEach(conn => {
+                        if (conn.open) {
+                            conn.send({
+                                type: 'clear'
+                            });
+                        }
                     });
                 }
             }
