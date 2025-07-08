@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Browser-to-Browser Data Sync</title>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         :root {
             --primary: #4361ee;
@@ -14,6 +15,7 @@
             --dark: #212529;
             --danger: #e63946;
             --warning: #ffaa00;
+            --background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
         }
         
         * {
@@ -24,7 +26,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            background: var(--background);
             color: var(--light);
             min-height: 100vh;
             padding: 20px;
@@ -172,6 +174,17 @@
             box-shadow: 0 5px 15px rgba(255, 170, 0, 0.4);
         }
         
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(230, 57, 70, 0.4);
+        }
+        
         .connection-status {
             display: flex;
             align-items: center;
@@ -307,6 +320,39 @@
                 width: 100%;
             }
         }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background: rgba(30, 30, 60, 0.9);
+            border-left: 4px solid var(--success);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #a0a0d0;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .notification .content {
+            padding-right: 20px;
+        }
     </style>
 </head>
 <body>
@@ -317,7 +363,7 @@
         </header>
         
         <div class="card">
-            <h2 class="card-title">Your Data</h2>
+            <h2 class="card-title"><i class="fas fa-database"></i> Your Data</h2>
             
             <div class="form-group">
                 <label for="dataKey">Key:</label>
@@ -334,20 +380,23 @@
                     <i class="fas fa-save"></i> Save Locally
                 </button>
                 <button id="syncBtn" class="btn btn-success">
-                    <i class="fas fa-sync"></i> Save & Sync
+                    <i class="fas fa-sync-alt"></i> Save & Sync
                 </button>
-                <button id="clearBtn" class="btn btn-warning">
+                <button id="clearBtn" class="btn btn-danger">
                     <i class="fas fa-trash"></i> Clear All
                 </button>
             </div>
         </div>
         
         <div class="card">
-            <h2 class="card-title">Connection</h2>
+            <h2 class="card-title"><i class="fas fa-link"></i> Connection</h2>
             
             <div class="form-group">
                 <label>Your Peer ID:</label>
                 <div id="yourPeerId" class="peer-id-display">Generating ID...</div>
+                <button id="copyPeerId" class="btn btn-warning">
+                    <i class="fas fa-copy"></i> Copy ID
+                </button>
             </div>
             
             <div class="form-group">
@@ -357,7 +406,7 @@
             
             <div class="action-row">
                 <button id="connectBtn" class="btn btn-primary">
-                    <i class="fas fa-link"></i> Connect
+                    <i class="fas fa-plug"></i> Connect
                 </button>
                 <button id="disconnectBtn" class="btn btn-warning">
                     <i class="fas fa-unlink"></i> Disconnect
@@ -371,12 +420,12 @@
         </div>
         
         <div class="card">
-            <h2 class="card-title">Stored Data</h2>
+            <h2 class="card-title"><i class="fas fa-table"></i> Stored Data</h2>
             <div id="dataDisplay"></div>
         </div>
         
         <div class="instructions">
-            <h3>How to Use:</h3>
+            <h3><i class="fas fa-info-circle"></i> How to Use:</h3>
             <ol>
                 <li><strong>Device 1:</strong> Open this page and note your Peer ID</li>
                 <li><strong>Device 2:</strong> Open this page on another device/browser</li>
@@ -387,6 +436,11 @@
             <p>Note: Data is stored in your browser's localStorage and synced via peer-to-peer connection</p>
         </div>
     </div>
+    
+    <div class="notification" id="notification">
+        <button class="close-btn">&times;</button>
+        <div class="content" id="notificationContent"></div>
+    </div>
 
     <script>
         // DOM Elements
@@ -396,27 +450,44 @@
         const syncBtn = document.getElementById('syncBtn');
         const clearBtn = document.getElementById('clearBtn');
         const yourPeerIdDisplay = document.getElementById('yourPeerId');
+        const copyPeerIdBtn = document.getElementById('copyPeerId');
         const remotePeerIdInput = document.getElementById('remotePeerId');
         const connectBtn = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
         const statusIndicator = document.getElementById('statusIndicator');
         const statusText = document.getElementById('statusText');
         const dataDisplay = document.getElementById('dataDisplay');
+        const notification = document.getElementById('notification');
+        const notificationContent = document.getElementById('notificationContent');
+        const closeBtn = document.querySelector('.close-btn');
         
         // PeerJS variables
         let peer = null;
         let conn = null;
         let currentPeerId = null;
         
+        // Show notification
+        function showNotification(message, duration = 3000) {
+            notificationContent.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+        
         // Initialize the application
         function init() {
-            // Create a Peer instance
+            // Create a Peer instance with valid ICE servers
             peer = new Peer({
-                debug: 3,
+                debug: 2,
                 config: {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' },
+                        { urls: 'stun:stun4.l.google.com:19302' }
                     ]
                 }
             });
@@ -434,16 +505,19 @@
                 
                 conn = connection;
                 setupConnectionHandlers();
-                updateConnectionStatus('connected');
+                updateConnectionStatus('connected', `Connected to ${conn.peer}`);
+                showNotification(`Connected to ${conn.peer.substring(0, 10)}...`);
             });
             
             peer.on('error', (err) => {
                 console.error('PeerJS error:', err);
                 updateConnectionStatus('error', `Error: ${err.type}`);
+                showNotification(`Connection error: ${err.type}`, 5000);
             });
             
             peer.on('disconnected', () => {
                 updateConnectionStatus('disconnected');
+                showNotification('Disconnected from peer server');
             });
             
             // Load existing data
@@ -455,12 +529,14 @@
             clearBtn.addEventListener('click', clearAllData);
             connectBtn.addEventListener('click', connectToPeer);
             disconnectBtn.addEventListener('click', disconnectFromPeer);
+            copyPeerIdBtn.addEventListener('click', copyPeerId);
+            closeBtn.addEventListener('click', () => notification.classList.remove('show'));
         }
         
         // Set up connection handlers
         function setupConnectionHandlers() {
             conn.on('open', () => {
-                updateConnectionStatus('connected');
+                updateConnectionStatus('connected', `Connected to ${conn.peer}`);
                 // Send our current data when connection opens
                 sendLocalStorageData();
             });
@@ -470,6 +546,7 @@
                     // Update localStorage with received data
                     localStorage.setItem(data.key, data.value);
                     loadAndDisplayData();
+                    showNotification(`Received update for: ${data.key}`);
                 } else if (data.type === 'fullSync') {
                     // Replace all data with received data
                     localStorage.clear();
@@ -477,17 +554,24 @@
                         localStorage.setItem(key, value);
                     }
                     loadAndDisplayData();
+                    showNotification('Received full data sync');
+                } else if (data.type === 'clear') {
+                    localStorage.clear();
+                    loadAndDisplayData();
+                    showNotification('Data cleared remotely');
                 }
             });
             
             conn.on('close', () => {
                 updateConnectionStatus('disconnected');
                 conn = null;
+                showNotification('Connection closed');
             });
             
             conn.on('error', (err) => {
                 console.error('Connection error:', err);
                 updateConnectionStatus('error', `Connection error: ${err}`);
+                showNotification(`Connection error: ${err}`, 5000);
             });
         }
         
@@ -502,7 +586,7 @@
                     break;
                 case 'connected':
                     statusIndicator.classList.add('status-connected');
-                    statusText.textContent = message || `Connected to ${conn.peer}`;
+                    statusText.textContent = message || 'Connected';
                     break;
                 case 'disconnected':
                     statusIndicator.classList.add('status-disconnected');
@@ -519,7 +603,7 @@
         function connectToPeer() {
             const remotePeerId = remotePeerIdInput.value.trim();
             if (!remotePeerId) {
-                alert('Please enter a peer ID');
+                showNotification('Please enter a peer ID', 3000);
                 return;
             }
             
@@ -527,6 +611,7 @@
             if (conn) conn.close();
             
             updateConnectionStatus('connecting', `Connecting to ${remotePeerId}...`);
+            showNotification(`Connecting to ${remotePeerId.substring(0, 10)}...`);
             
             // Connect to remote peer
             conn = peer.connect(remotePeerId, {
@@ -544,6 +629,7 @@
                 conn = null;
             }
             updateConnectionStatus('disconnected');
+            showNotification('Disconnected');
         }
         
         // Save data to localStorage only
@@ -552,12 +638,13 @@
             const value = dataValueInput.value.trim();
             
             if (!key || !value) {
-                alert('Please enter both key and value');
+                showNotification('Please enter both key and value', 3000);
                 return;
             }
             
             localStorage.setItem(key, value);
             loadAndDisplayData();
+            showNotification(`Saved locally: ${key}`);
             
             // Clear input fields
             dataKeyInput.value = '';
@@ -570,7 +657,7 @@
             const value = dataValueInput.value.trim();
             
             if (!key || !value) {
-                alert('Please enter both key and value');
+                showNotification('Please enter both key and value', 3000);
                 return;
             }
             
@@ -585,6 +672,9 @@
                     key: key,
                     value: value
                 });
+                showNotification(`Synced: ${key}`);
+            } else {
+                showNotification('Saved locally but no connection to sync', 3000);
             }
             
             // Clear input fields
@@ -606,13 +696,16 @@
                 type: 'fullSync',
                 data: allData
             });
+            
+            showNotification('Sent full data to connected peer');
         }
         
         // Clear all data
         function clearAllData() {
-            if (confirm('Are you sure you want to clear all data?')) {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
                 localStorage.clear();
                 loadAndDisplayData();
+                showNotification('All data cleared');
                 
                 // Also send clear command to connected peers
                 if (conn && conn.open) {
@@ -621,6 +714,19 @@
                     });
                 }
             }
+        }
+        
+        // Copy peer ID to clipboard
+        function copyPeerId() {
+            if (!currentPeerId) return;
+            
+            navigator.clipboard.writeText(currentPeerId)
+                .then(() => {
+                    showNotification('Peer ID copied to clipboard!');
+                })
+                .catch(err => {
+                    showNotification('Failed to copy: ' + err);
+                });
         }
         
         // Load data from localStorage and display it
