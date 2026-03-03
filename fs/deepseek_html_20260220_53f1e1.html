@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction အလိုက် ပျမ်းမျှကုန်ကျစရိတ်တွက်စက်</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Pyidaungsu', sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #2b3a67 0%, #1b2a4e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+        }
+        .calculator {
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 28px;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+            padding: 30px 25px;
+            max-width: 800px;
+            width: 100%;
+            backdrop-filter: blur(4px);
+        }
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            font-size: 28px;
+            margin: 0 0 8px 0;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .subhead {
+            text-align: center;
+            color: #475569;
+            font-size: 16px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e9eef3;
+            padding-bottom: 15px;
+        }
+        .subhead i {
+            color: #d97706;
+        }
+        .transactions-panel {
+            background: #f8fafd;
+            border-radius: 24px;
+            padding: 20px 15px;
+            margin-bottom: 25px;
+            border: 1px solid #dde7f0;
+        }
+        .transactions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .transactions-header h3 {
+            margin: 0;
+            color: #0f2b4b;
+            font-weight: 600;
+            font-size: 20px;
+        }
+        .btn-add {
+            background: #2b3a67;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+            box-shadow: 0 4px 8px rgba(0,40,80,0.2);
+        }
+        .btn-add:hover {
+            background: #1f2c4f;
+        }
+        .transaction-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+            background: white;
+            padding: 12px 15px;
+            border-radius: 60px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            border: 1px solid #e2eaf2;
+        }
+        .transaction-row label {
+            font-weight: 600;
+            color: #334155;
+            min-width: 45px;
+        }
+        .transaction-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #dde7f0;
+            border-radius: 40px;
+            font-size: 15px;
+            background: #fcfdff;
+            transition: 0.15s;
+        }
+        .transaction-row input:focus {
+            border-color: #2b3a67;
+            outline: none;
+            background: white;
+        }
+        .btn-remove {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            border: 1px solid #fecaca;
+        }
+        .btn-remove:hover {
+            background: #fecaca;
+            color: #7f1d1d;
+        }
+        .summary-box {
+            background: linear-gradient(120deg, #ffffff, #f4f9ff);
+            border-radius: 30px;
+            padding: 20px 25px;
+            margin: 20px 0 25px 0;
+            border: 2px solid #bfd9f5;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 8px 0;
+            border-bottom: 1px dashed #bdd3eb;
+        }
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        .summary-label {
+            font-size: 18px;
+            font-weight: 500;
+            color: #1e3a5f;
+        }
+        .summary-number {
+            font-size: 26px;
+            font-weight: 700;
+            background: #ffffff;
+            padding: 6px 20px;
+            border-radius: 60px;
+            color: #0b2b4a;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            border: 1px solid #cbd5e1;
+        }
+        .target-section {
+            background: #eef5ff;
+            border-radius: 30px;
+            padding: 20px 25px;
+            margin-top: 20px;
+        }
+        .target-input {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .target-input label {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 18px;
+        }
+        .target-input input {
+            flex: 2;
+            min-width: 200px;
+            padding: 14px 20px;
+            border: 2px solid #b3cdf0;
+            border-radius: 60px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .profit-results {
+            margin-top: 25px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .profit-card {
+            background: white;
+            border-radius: 28px;
+            padding: 15px 10px;
+            text-align: center;
+            box-shadow: 0 8px 18px rgba(0, 30, 60, 0.12);
+            border: 1px solid #d9e6f5;
+        }
+        .profit-card .label {
+            color: #4b556b;
+            font-size: 15px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .profit-card .value {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .green {
+            color: #0b6e4f;
+        }
+        .red {
+            color: #b22234;
+        }
+        .note {
+            text-align: center;
+            margin-top: 20px;
+            color: #4b6584;
+            background: #f0f7fa;
+            padding: 8px 15px;
+            border-radius: 60px;
+            font-size: 14px;
+        }
+        hr {
+            border: 1px solid #cbd6e6;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>📦 ကုန်ဝယ်ယူမှုများ ပျမ်းမျှစရိတ်</h1>
+        <div class="subhead"><i>✏️</i> မတူညီသောဈေးနှုန်းများကို ပေါင်းချိန်ပြီး ပျမ်းမျှတွက်ပေးသည်</div>
+
+        <!-- Transaction Rows Container -->
+        <div class="transactions-panel">
+            <div class="transactions-header">
+                <h3>🛒 အရောင်းအဝယ်များ (Transactions)</h3>
+                <button class="btn-add" id="addRowBtn">
+                    <span style="font-size:22px;">+</span> Row အသစ်ထည့်ရန်
+                </button>
+            </div>
+            <div id="transactionsList"></div>
+            <div style="font-size: 14px; color:#4b6584; margin-top:12px; padding-left:10px;">
+                ⚡ ပမာဏ (Qty) နှင့် တစ်ခုချင်းစျေး (Unit Cost) ဖြည့်ပါ။ စုစုပေါင်းကို အောက်တွင်ပြပါမည်။
+            </div>
+        </div>
+
+        <!-- Summary of total units & cost + Average Cost -->
+        <div class="summary-box">
+            <div class="summary-item">
+                <span class="summary-label">📊 စုစုပေါင်းအရေအတွက်</span>
+                <span class="summary-number" id="totalQtyDisplay">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">💰 စုစုပေါင်းကုန်ကျငွေ</span>
+                <span class="summary-number" id="totalCostDisplay">0 ကျပ်</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">⚖️ ပျမ်းမျှကုန်ကျစရိတ် (တစ်ခုလျှင်)</span>
+                <span class="summary-number" id="avgCostDisplay">0 ကျပ်</span>
+            </div>
+        </div>
+
+        <!-- Target Selling Price & Profit -->
+        <div class="target-section">
+            <div class="target-input">
+                <label>🎯 ပစ်မှတ်ရောင်းဈေး (တစ်ခုချင်း) </label>
+                <input type="number" id="targetPrice" step="1" min="0" value="0" placeholder="ဥပမာ 5500">
+            </div>
+
+            <div class="profit-results">
+                <div class="profit-card">
+                    <div class="label">📈 တစ်ခုချင်းအမြတ်</div>
+                    <div class="value" id="profitPerUnit">0</div>
+                </div>
+                <div class="profit-card">
+                    <div class="label">📦 စုစုပေါင်းအမြတ်</div>
+                    <div class="value" id="totalProfit">0</div>
+                </div>
+                <div class="profit-card">
+                    <div class="label">📊 အမြတ်ရာခိုင်နှုန်း</div>
+                    <div class="value" id="profitMargin">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            💡 တစ်ခုချင်းစီရဲ့ အရေအတွက်နဲ့ ဈေးနှုန်းကို သေချာဖြည့်ပါ။ အနီရောင်ဆိုလျှင် အရှုံးဖြစ်သည်။
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Get DOM elements
+            const transactionsList = document.getElementById('transactionsList');
+            const addRowBtn = document.getElementById('addRowBtn');
+
+            // Display elements
+            const totalQtySpan = document.getElementById('totalQtyDisplay');
+            const totalCostSpan = document.getElementById('totalCostDisplay');
+            const avgCostSpan = document.getElementById('avgCostDisplay');
+            const targetPriceInput = document.getElementById('targetPrice');
+            const profitPerUnitSpan = document.getElementById('profitPerUnit');
+            const totalProfitSpan = document.getElementById('totalProfit');
+            const profitMarginSpan = document.getElementById('profitMargin');
+
+            // Store row count for dynamic ids (optional)
+            let rowIndex = 2; // for new rows
+
+            // Helper: format number with commas
+            function formatNumber(num) {
+                return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+
+            // Helper: format currency (kyat)
+            function formatCurrency(num) {
+                return formatNumber(num) + ' ကျပ်';
+            }
+
+            // Recalculate everything based on current rows and target price
+            function recalculate() {
+                const rows = document.querySelectorAll('.transaction-row');
+                let totalQty = 0;
+                let totalCost = 0;
+
+                rows.forEach(row => {
+                    const qtyInput = row.querySelector('.row-qty');
+                    const costInput = row.querySelector('.row-cost');
+                    let qty = parseFloat(qtyInput.value);
+                    let cost = parseFloat(costInput.value);
+
+                    if (isNaN(qty) || qty < 0) qty = 0;
+                    if (isNaN(cost) || cost < 0) cost = 0;
+
+                    // Optional: force empty or negative to zero? but we keep as is. better to allow zero.
+                    totalQty += qty;
+                    totalCost += qty * cost;
+                });
+
+                // Update summary
+                totalQtySpan.textContent = formatNumber(totalQty);
+                totalCostSpan.textContent = formatCurrency(totalCost);
+
+                let avgCost = (totalQty > 0) ? totalCost / totalQty : 0;
+                avgCostSpan.textContent = (totalQty > 0) ? formatCurrency(avgCost) : '0 ကျပ်';
+
+                // Get target price
+                let targetPrice = parseFloat(targetPriceInput.value);
+                if (isNaN(targetPrice) || targetPrice < 0) targetPrice = 0;
+
+                // Calculate profits based on average cost
+                let profitPerUnit = targetPrice - avgCost;
+                let totalProfit = profitPerUnit * totalQty;
+                let profitMargin = (avgCost > 0) ? (profitPerUnit / avgCost) * 100 : (targetPrice > 0 ? 100 : 0);
+
+                // Update profit displays with color
+                // Profit per unit
+                profitPerUnitSpan.textContent = (profitPerUnit >= 0 ? '' : '- ') + formatCurrency(Math.abs(profitPerUnit));
+                profitPerUnitSpan.className = 'value ' + (profitPerUnit >= 0 ? 'green' : 'red');
+
+                // Total profit
+                totalProfitSpan.textContent = (totalProfit >= 0 ? '' : '- ') + formatCurrency(Math.abs(totalProfit));
+                totalProfitSpan.className = 'value ' + (totalProfit >= 0 ? 'green' : 'red');
+
+                // Margin
+                let marginValue = profitMargin.toFixed(2);
+                profitMarginSpan.textContent = (profitMargin >= 0 ? '' : '- ') + marginValue + '%';
+                profitMarginSpan.className = 'value ' + (profitMargin >= 0 ? 'green' : 'red');
+            }
+
+            // Add event listeners to all inputs inside a given row
+            function attachRowEvents(row) {
+                const qtyInput = row.querySelector('.row-qty');
+                const costInput = row.querySelector('.row-cost');
+                const removeBtn = row.querySelector('.btn-remove');
+
+                qtyInput.addEventListener('input', recalculate);
+                costInput.addEventListener('input', recalculate);
+
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        // Prevent removing the last row? we allow but if zero rows, we can keep at least one by not allowing.
+                        const allRows = document.querySelectorAll('.transaction-row');
+                        if (allRows.length <= 1) {
+                            alert('အနည်းဆုံး တစ်ကြောင်း လိုအပ်ပါသည်။');
+                            return;
+                        }
+                        row.remove();
+                        recalculate();
+                    });
+                }
+            }
+
+            // Function to create a new transaction row (with empty values)
+            function createTransactionRow(qty = '', cost = '') {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'transaction-row';
+
+                rowDiv.innerHTML = `
+                    <label>📦</label>
+                    <input type="number" class="row-qty" step="1" min="0" value="${qty}" placeholder="အရေအတွက်">
+                    <label>💰</label>
+                    <input type="number" class="row-cost" step="1" min="0" value="${cost}" placeholder="တစ်ခုချင်းစျေး">
+                    <button class="btn-remove" type="button">✕</button>
+                `;
+
+                return rowDiv;
+            }
+
+            // Initialize with two default rows for convenience
+            function initDefaultRows() {
+                // Clear existing
+                transactionsList.innerHTML = '';
+
+                // Row 1
+                const row1 = createTransactionRow(10, 4500);  // sample
+                transactionsList.appendChild(row1);
+                attachRowEvents(row1);
+
+                // Row 2
+                const row2 = createTransactionRow(5, 4800);
+                transactionsList.appendChild(row2);
+                attachRowEvents(row2);
+
+                recalculate();
+            }
+
+            // Add new row (empty)
+            function addNewRow() {
+                const newRow = createTransactionRow('', '');
+                transactionsList.appendChild(newRow);
+                attachRowEvents(newRow);
+                recalculate(); // recalc after adding (though values empty, will show previous totals)
+            }
+
+            // Event listener for add button
+            addRowBtn.addEventListener('click', addNewRow);
+
+            // Target price input event
+            targetPriceInput.addEventListener('input', recalculate);
+
+            // Start with default rows
+            initDefaultRows();
+
+            // Optional: ensure at least one row exists (if someone removes all via console, but UI blocks removal of last via alert)
+        })();
+    </script>
+</body>
+</html>
