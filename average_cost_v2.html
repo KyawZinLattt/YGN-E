@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Average Cost Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00e5a0;
+    --accent3: #ffc85e;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --buy: #00e5a0;
+    --sell: #ff4d6d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(0,229,160,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(255,77,109,0.06) 0%, transparent 60%);
+  }
+
+  .header { text-align: center; margin-bottom: 36px; }
+  .header h1 {
+    font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent), #00b8ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .header p { color: var(--muted); font-size: 0.88rem; margin-top: 6px; font-family: 'Space Mono', monospace; }
+
+  .container { max-width: 820px; margin: 0 auto; display: grid; gap: 20px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+
+  .card-title {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+
+  .input-row { display: grid; grid-template-columns: auto 1fr 1fr 40px; gap: 10px; align-items: end; margin-bottom: 10px; }
+
+  .type-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); height: 44px; }
+  .type-btn {
+    padding: 0 14px; border: none; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.05em; transition: all 0.15s; background: var(--surface); color: var(--muted);
+  }
+  .type-btn.buy.active  { background: rgba(0,229,160,0.15); color: var(--buy); }
+  .type-btn.sell.active { background: rgba(255,77,109,0.15); color: var(--sell); }
+  .type-btn:hover:not(.active) { background: var(--border); }
+
+  .input-group { display: flex; flex-direction: column; gap: 5px; }
+  .input-group label { font-size: 0.7rem; color: var(--muted); font-family: 'Space Mono', monospace; letter-spacing: 0.08em; }
+
+  input[type="number"], input[type="text"] {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.9rem;
+    padding: 10px 12px; height: 44px; transition: border-color 0.15s;
+    font-family: 'Space Mono', monospace; -moz-appearance: textfield;
+  }
+  input[type="text"] { font-family: 'Syne', sans-serif; font-size: 0.88rem; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,160,0.1); }
+  input::placeholder { color: var(--muted); }
+
+  .add-btn {
+    width: 40px; height: 44px; background: rgba(0,229,160,0.12); border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 8px; color: var(--accent); font-size: 1.4rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s; align-self: flex-end;
+  }
+  .add-btn:hover { background: rgba(0,229,160,0.22); transform: scale(1.05); }
+
+  .tx-list {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: 300px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+
+  .tx-item {
+    display: grid; grid-template-columns: 52px 1fr 1fr 1fr 32px;
+    gap: 8px; align-items: center; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-family: 'Space Mono', monospace; font-size: 0.82rem;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+  .tx-badge { font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; text-align: center; letter-spacing: 0.08em; }
+  .tx-badge.buy  { background: rgba(0,229,160,0.15); color: var(--buy); }
+  .tx-badge.sell { background: rgba(255,77,109,0.15); color: var(--sell); }
+  .tx-val { color: var(--text); }
+  .tx-val span { color: var(--muted); font-size: 0.7rem; }
+  .tx-total { color: var(--accent3); }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 2px 4px; border-radius: 4px; transition: color 0.15s; line-height: 1; }
+  .del-btn:hover { color: var(--sell); }
+
+  .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 0.82rem; font-family: 'Space Mono', monospace; }
+
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 4px; }
+  .result-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .result-item.highlight { border-color: rgba(0,229,160,0.4); background: rgba(0,229,160,0.06); }
+  .result-item.profit    { border-color: rgba(0,229,160,0.4); background: rgba(0,229,160,0.06); }
+  .result-item.loss      { border-color: rgba(255,77,109,0.4); background: rgba(255,77,109,0.06); }
+  .result-label { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; font-family: 'Space Mono', monospace; }
+  .result-value { font-size: 1.35rem; font-weight: 800; font-family: 'Space Mono', monospace; letter-spacing: -0.02em; }
+  .result-item.highlight .result-value { color: var(--accent); }
+  .result-item.profit .result-value { color: var(--buy); }
+  .result-item.loss .result-value { color: var(--sell); }
+  .result-sub { font-size: 0.7rem; color: var(--muted); margin-top: 4px; font-family: 'Space Mono', monospace; }
+
+  .target-section { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  .summary-bar {
+    display: flex; gap: 16px; flex-wrap: wrap; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    font-family: 'Space Mono', monospace; font-size: 0.78rem; color: var(--muted);
+  }
+  .summary-bar span { color: var(--text); }
+
+  /* Sessions */
+  .sessions-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .s-btn {
+    height: 44px; padding: 0 18px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: 'Syne', sans-serif; font-size: 0.82rem; font-weight: 700;
+    letter-spacing: 0.04em; transition: all 0.15s; white-space: nowrap;
+  }
+  .s-btn.save { background: rgba(0,229,160,0.15); color: var(--accent); border: 1px solid rgba(0,229,160,0.3); }
+  .s-btn.save:hover { background: rgba(0,229,160,0.25); }
+  .s-btn.new-s { background: rgba(255,200,94,0.12); color: var(--accent3); border: 1px solid rgba(255,200,94,0.25); }
+  .s-btn.new-s:hover { background: rgba(255,200,94,0.22); }
+
+  .session-list { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .session-item {
+    display: flex; align-items: center; gap: 10px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; cursor: pointer; transition: all 0.15s; animation: fadeIn 0.2s ease;
+  }
+  .session-item:hover { border-color: rgba(0,229,160,0.35); background: rgba(0,229,160,0.04); }
+  .session-item.active-s { border-color: rgba(0,229,160,0.5); background: rgba(0,229,160,0.07); }
+  .session-info { flex: 1; min-width: 0; }
+  .session-name { font-size: 0.88rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .session-meta { font-size: 0.68rem; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 2px; }
+  .active-badge {
+    font-size: 0.62rem; background: rgba(0,229,160,0.2); color: var(--accent);
+    padding: 2px 7px; border-radius: 10px; font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .s-icon-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px 7px; border-radius: 5px; font-size: 0.9rem; transition: all 0.12s; line-height: 1; }
+  .s-icon-btn:hover { background: var(--border); }
+  .s-icon-btn.del:hover { color: var(--sell); }
+  .no-sessions { text-align: center; padding: 20px; color: var(--muted); font-size: 0.8rem; font-family: 'Space Mono', monospace; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--card); border: 1px solid var(--accent); color: var(--accent);
+    padding: 10px 22px; border-radius: 30px; font-size: 0.82rem; font-family: 'Space Mono', monospace;
+    opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 520px) {
+    .input-row { grid-template-columns: 1fr 1fr; }
+    .type-toggle { grid-column: 1 / -1; }
+    .add-btn { justify-self: end; }
+    .tx-item { grid-template-columns: 48px 1fr 1fr 28px; font-size: 0.76rem; }
+    .tx-total { display: none; }
+    .target-section { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚖️ Average Cost Calculator</h1>
+  <p>Buy · Sell · Track · Profit Analysis</p>
+</div>
+
+<div class="container">
+
+  <!-- Add Transaction -->
+  <div class="card">
+    <div class="card-title">Add Transaction</div>
+    <div class="input-row">
+      <div class="type-toggle">
+        <button class="type-btn buy active" id="buyBtn"  onclick="setType('buy')">BUY</button>
+        <button class="type-btn sell"       id="sellBtn" onclick="setType('sell')">SELL</button>
+      </div>
+      <div class="input-group">
+        <label>QTY (အရေအတွက်)</label>
+        <input type="number" id="qtyInput" placeholder="0" min="0" step="any">
+      </div>
+      <div class="input-group">
+        <label>PRICE (တစ်ခုစျေး)</label>
+        <input type="number" id="priceInput" placeholder="0.00" min="0" step="any">
+      </div>
+      <button class="add-btn" onclick="addTransaction()" title="Add">+</button>
+    </div>
+
+    <div class="tx-list" id="txList">
+      <div class="empty-state" id="emptyState">transaction မရှိသေးပါ ↑ အပေါ်မှာ ထည့်ပါ</div>
+    </div>
+
+    <div id="summaryBar" style="display:none; margin-top:12px;">
+      <div class="summary-bar">
+        <div>Transactions: <span id="sumCount">0</span></div>
+        <div>Buy Qty: <span id="sumBuyQty">0</span></div>
+        <div>Sell Qty: <span id="sumSellQty">0</span></div>
+        <div>Holding: <span id="sumHoldQty">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card">
+    <div class="card-title">Average Cost &amp; Holding Status</div>
+    <div class="result-grid">
+      <div class="result-item highlight">
+        <div class="result-label">Average Cost</div>
+        <div class="result-value" id="avgCostVal">—</div>
+        <div class="result-sub">per unit</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Holding Qty</div>
+        <div class="result-value" id="holdQtyVal">—</div>
+        <div class="result-sub">current position</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Total Invested</div>
+        <div class="result-value" id="totalInvested">—</div>
+        <div class="result-sub">holding value @ avg</div>
+      </div>
+      <div class="result-item" id="realizedCard">
+        <div class="result-label">Realized P/L</div>
+        <div class="result-value" id="realizedPL">—</div>
+        <div class="result-sub" id="realizedSub">from sells so far</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Target Price -->
+  <div class="card">
+    <div class="card-title">Target Selling Price Analysis</div>
+    <div class="target-section">
+      <div class="input-group">
+        <label>TARGET SELL PRICE (ရောင်းမည့်စျေး)</label>
+        <input type="number" id="targetPrice" placeholder="0.00" min="0" step="any" oninput="calcTarget()">
+      </div>
+      <div class="input-group">
+        <label>SELL QTY (ရောင်းမည့်အရေအတွက်)</label>
+        <input type="number" id="targetQty" placeholder="all holding" min="0" step="any" oninput="calcTarget()">
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="result-grid">
+      <div class="result-item">
+        <div class="result-label">Revenue</div>
+        <div class="result-value" id="tRevenue">—</div>
+        <div class="result-sub">qty × sell price</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Cost Basis</div>
+        <div class="result-value" id="tCost">—</div>
+        <div class="result-sub">qty × avg cost</div>
+      </div>
+      <div class="result-item" id="tPLCard">
+        <div class="result-label">Profit / Loss</div>
+        <div class="result-value" id="tPL">—</div>
+        <div class="result-sub" id="tPLPct">enter price above</div>
+      </div>
+      <div class="result-item" id="tMarginCard">
+        <div class="result-label">Margin %</div>
+        <div class="result-value" id="tMargin">—</div>
+        <div class="result-sub">profit / revenue</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:0.72rem; color:var(--muted); font-family:'Space Mono',monospace; line-height:1.8;">
+      <b style="color:var(--text)">Break-even:</b> <span id="breakEven">—</span> &nbsp;|&nbsp;
+      <b style="color:var(--text)">+10%:</b> <span id="p10">—</span> &nbsp;|&nbsp;
+      <b style="color:var(--text)">+20%:</b> <span id="p20">—</span> &nbsp;|&nbsp;
+      <b style="color:var(--text)">+50%:</b> <span id="p50">—</span>
+    </div>
+  </div>
+
+  <!-- Sessions -->
+  <div class="card">
+    <div class="card-title">Saved Sessions</div>
+    <div class="sessions-bar">
+      <input type="text" id="sessionNameInput" placeholder="Session နာမည် (ဥပမာ BTC-Nov, AAPL-Q1)" maxlength="40" style="flex:1; min-width:160px;">
+      <button class="s-btn save" onclick="saveSession()">💾 Save</button>
+      <button class="s-btn new-s" onclick="newSession()">＋ New</button>
+    </div>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  // ── State ──────────────────────────────────────────────
+  var transactions = [];
+  var currentType  = 'buy';
+  var activeKey    = null;
+
+  // ── Helpers ────────────────────────────────────────────
+  function fmt(n, d) {
+    if (d === undefined) d = 2;
+    if (isNaN(n) || n === null) return '—';
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  var toastTimer;
+  function showToast(msg, warn) {
+    var el = document.getElementById('toast');
+    el.textContent        = msg;
+    el.style.borderColor  = warn ? 'var(--accent3)' : 'var(--accent)';
+    el.style.color        = warn ? 'var(--accent3)' : 'var(--accent)';
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2200);
+  }
+
+  // ── Type toggle ────────────────────────────────────────
+  window.setType = function(type) {
+    currentType = type;
+    document.getElementById('buyBtn').classList.toggle('active',  type === 'buy');
+    document.getElementById('sellBtn').classList.toggle('active', type === 'sell');
+  };
+
+  // ── Add / Delete ───────────────────────────────────────
+  window.addTransaction = function() {
+    var qty   = parseFloat(document.getElementById('qtyInput').value);
+    var price = parseFloat(document.getElementById('priceInput').value);
+    if (!qty || qty <= 0 || !price || price <= 0) {
+      document.getElementById('qtyInput').style.borderColor   = 'var(--sell)';
+      document.getElementById('priceInput').style.borderColor = 'var(--sell)';
+      setTimeout(function() {
+        document.getElementById('qtyInput').style.borderColor   = '';
+        document.getElementById('priceInput').style.borderColor = '';
+      }, 800);
+      return;
+    }
+    transactions.push({ type: currentType, qty: qty, price: price, total: qty * price, id: Date.now() });
+    document.getElementById('qtyInput').value   = '';
+    document.getElementById('priceInput').value = '';
+    render();
+  };
+
+  window.deleteTransaction = function(id) {
+    transactions = transactions.filter(function(t) { return t.id !== id; });
+    render();
+  };
+
+  // ── Average cost calc ──────────────────────────────────
+  function calcAverageCost() {
+    var holdQty = 0, holdCost = 0, realizedPL = 0;
+    for (var i = 0; i < transactions.length; i++) {
+      var tx = transactions[i];
+      if (tx.type === 'buy') {
+        holdQty  += tx.qty;
+        holdCost += tx.total;
+      } else {
+        var avg      = holdQty > 0 ? holdCost / holdQty : 0;
+        var sellQty  = Math.min(tx.qty, holdQty);
+        var costSold = sellQty * avg;
+        realizedPL  += (tx.price * sellQty) - costSold;
+        holdQty     -= sellQty;
+        holdCost    -= costSold;
+        if (holdQty < 0.000001) { holdQty = 0; holdCost = 0; }
+      }
+    }
+    return { holdQty: holdQty, holdCost: holdCost, avgCost: holdQty > 0 ? holdCost / holdQty : 0, realizedPL: realizedPL };
+  }
+
+  // ── Render ─────────────────────────────────────────────
+  function render() {
+    var list       = document.getElementById('txList');
+    var emptyState = document.getElementById('emptyState');
+    var summaryBar = document.getElementById('summaryBar');
+
+    // Remove only .tx-item rows — leave emptyState div untouched
+    var rows = list.querySelectorAll('.tx-item');
+    for (var i = 0; i < rows.length; i++) { rows[i].parentNode.removeChild(rows[i]); }
+
+    if (transactions.length === 0) {
+      emptyState.style.display = '';
+      summaryBar.style.display = 'none';
+      resetResults();
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    summaryBar.style.display = '';
+
+    for (var j = 0; j < transactions.length; j++) {
+      var tx  = transactions[j];
+      var row = document.createElement('div');
+      row.className = 'tx-item';
+      row.innerHTML =
+        '<span class="tx-badge ' + tx.type + '">' + tx.type.toUpperCase() + '</span>' +
+        '<div class="tx-val">' + fmt(tx.qty, 4) + ' <span>qty</span></div>' +
+        '<div class="tx-val">' + fmt(tx.price) + ' <span>/unit</span></div>' +
+        '<div class="tx-total">' + fmt(tx.total) + '</div>' +
+        '<button class="del-btn" onclick="deleteTransaction(' + tx.id + ')" title="Remove">\xd7</button>';
+      list.appendChild(row);
+    }
+
+    var buyQty  = 0, sellQty = 0;
+    for (var k = 0; k < transactions.length; k++) {
+      if (transactions[k].type === 'buy')  buyQty  += transactions[k].qty;
+      else                                 sellQty += transactions[k].qty;
+    }
+    document.getElementById('sumCount').textContent   = transactions.length;
+    document.getElementById('sumBuyQty').textContent  = fmt(buyQty,  4);
+    document.getElementById('sumSellQty').textContent = fmt(sellQty, 4);
+
+    var r = calcAverageCost();
+    document.getElementById('sumHoldQty').textContent    = fmt(r.holdQty, 4);
+    document.getElementById('avgCostVal').textContent    = r.holdQty > 0 ? fmt(r.avgCost)   : '—';
+    document.getElementById('holdQtyVal').textContent    = fmt(r.holdQty, 4);
+    document.getElementById('totalInvested').textContent = r.holdQty > 0 ? fmt(r.holdCost)  : '0.00';
+
+    var plEl  = document.getElementById('realizedPL');
+    var plSub = document.getElementById('realizedSub');
+    plEl.textContent  = fmt(Math.abs(r.realizedPL));
+    plEl.style.color  = r.realizedPL >= 0 ? 'var(--buy)' : 'var(--sell)';
+    plSub.textContent = r.realizedPL >= 0 ? '▲ profit realized' : '▼ loss realized';
+
+    document.getElementById('breakEven').textContent = r.holdQty > 0 ? fmt(r.avgCost)       : '—';
+    document.getElementById('p10').textContent       = r.holdQty > 0 ? fmt(r.avgCost * 1.1) : '—';
+    document.getElementById('p20').textContent       = r.holdQty > 0 ? fmt(r.avgCost * 1.2) : '—';
+    document.getElementById('p50').textContent       = r.holdQty > 0 ? fmt(r.avgCost * 1.5) : '—';
+
+    calcTarget();
+  }
+
+  // ── Calc target ────────────────────────────────────────
+  window.calcTarget = function() {
+    var r       = calcAverageCost();
+    var tPrice  = parseFloat(document.getElementById('targetPrice').value);
+    var tQtyRaw = parseFloat(document.getElementById('targetQty').value);
+    var tQty    = (isNaN(tQtyRaw) || tQtyRaw <= 0) ? r.holdQty : Math.min(tQtyRaw, r.holdQty);
+
+    if (!tPrice || tPrice <= 0 || r.holdQty <= 0 || r.avgCost <= 0) {
+      document.getElementById('tRevenue').textContent = '—';
+      document.getElementById('tCost').textContent    = '—';
+      document.getElementById('tPL').textContent      = '—';
+      document.getElementById('tMargin').textContent  = '—';
+      document.getElementById('tPLPct').textContent   = 'enter price above';
+      document.getElementById('tPLCard').className    = 'result-item';
+      document.getElementById('tMarginCard').className = 'result-item';
+      return;
+    }
+
+    var revenue = tQty * tPrice;
+    var cost    = tQty * r.avgCost;
+    var pl      = revenue - cost;
+    var pct     = cost    > 0 ? (pl / cost)    * 100 : 0;
+    var margin  = revenue > 0 ? (pl / revenue) * 100 : 0;
+
+    document.getElementById('tRevenue').textContent = fmt(revenue);
+    document.getElementById('tCost').textContent    = fmt(cost);
+
+    var plEl = document.getElementById('tPL');
+    plEl.textContent = (pl >= 0 ? '+' : '') + fmt(pl);
+    plEl.style.color = pl >= 0 ? 'var(--buy)' : 'var(--sell)';
+    document.getElementById('tPLPct').textContent  = (pct >= 0 ? '+' : '') + fmt(pct) + '% on cost';
+    document.getElementById('tPLCard').className   = 'result-item ' + (pl >= 0 ? 'profit' : 'loss');
+
+    var mEl = document.getElementById('tMargin');
+    mEl.textContent = (margin >= 0 ? '+' : '') + fmt(margin) + '%';
+    mEl.style.color = margin >= 0 ? 'var(--buy)' : 'var(--sell)';
+    document.getElementById('tMarginCard').className = 'result-item ' + (margin >= 0 ? 'profit' : 'loss');
+  };
+
+  // ── Reset ──────────────────────────────────────────────
+  function resetResults() {
+    var ids = ['avgCostVal','holdQtyVal','totalInvested','realizedPL','tRevenue','tCost','tPL','tMargin'];
+    for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).textContent = '—';
+    var refs = ['breakEven','p10','p20','p50'];
+    for (var j = 0; j < refs.length; j++) document.getElementById(refs[j]).textContent = '—';
+    document.getElementById('tPLCard').className    = 'result-item';
+    document.getElementById('tMarginCard').className = 'result-item';
+    document.getElementById('tPLPct').textContent   = 'enter price above';
+  }
+
+  // ── LocalStorage sessions ──────────────────────────────
+  var LS_LIST = 'avgcalc_list';
+
+  function getKeys() {
+    try { return JSON.parse(localStorage.getItem(LS_LIST) || '[]'); } catch(e) { return []; }
+  }
+  function setKeys(keys) { localStorage.setItem(LS_LIST, JSON.stringify(keys)); }
+
+  window.saveSession = function() {
+    var name = document.getElementById('sessionNameInput').value.trim();
+    if (!name) { showToast('Session နာမည် ထည့်ပါ ✏️', true); document.getElementById('sessionNameInput').focus(); return; }
+    if (transactions.length === 0) { showToast('Transaction မရှိသေးပါ', true); return; }
+
+    var key  = activeKey || ('avgcalc_' + Date.now());
+    var data = { name: name, transactions: transactions, savedAt: Date.now() };
+    localStorage.setItem(key, JSON.stringify(data));
+
+    var keys = getKeys();
+    if (keys.indexOf(key) === -1) { keys.push(key); setKeys(keys); }
+    activeKey = key;
+    renderSessions();
+    showToast('"' + name + '" သိမ်းပြီးပါပြီ ✓');
+  };
+
+  function loadSession(key) {
+    try {
+      var data = JSON.parse(localStorage.getItem(key));
+      if (!data) return;
+      transactions = data.transactions || [];
+      activeKey    = key;
+      document.getElementById('sessionNameInput').value = data.name || '';
+      render();
+      renderSessions();
+      showToast('"' + data.name + '" ပြန်တင်ပြီးပါပြီ ✓');
+    } catch(e) { showToast('Load မရဘူး', true); }
+  }
+
+  window.deleteSession = function(key, e) {
+    e.stopPropagation();
+    var data = {};
+    try { data = JSON.parse(localStorage.getItem(key) || '{}'); } catch(ex) {}
+    if (!confirm('"' + (data.name || 'Session') + '" ကို ဖျက်မလား?')) return;
+    localStorage.removeItem(key);
+    var keys = getKeys().filter(function(k) { return k !== key; });
+    setKeys(keys);
+    if (activeKey === key) {
+      activeKey    = null;
+      transactions = [];
+      document.getElementById('sessionNameInput').value = '';
+      render();
+    }
+    renderSessions();
+    showToast('Session ဖျက်ပြီးပါပြီ');
+  };
+
+  window.newSession = function() {
+    if (transactions.length > 0 && !confirm('လက်ရှိ data တွေ ရှင်းပြီး session အသစ်စတင်မလား?')) return;
+    activeKey    = null;
+    transactions = [];
+    document.getElementById('sessionNameInput').value = '';
+    render();
+    renderSessions();
+    document.getElementById('sessionNameInput').focus();
+    showToast('Session အသစ် စတင်ပြီ ✦');
+  };
+
+  function renderSessions() {
+    var container = document.getElementById('sessionList');
+    var keys      = getKeys();
+
+    if (keys.length === 0) {
+      container.innerHTML = '<div class="no-sessions">session မရှိသေးပါ — data ထည့်ပြီး 💾 Save နှိပ်ပါ</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    var reversed = keys.slice().reverse();
+    for (var i = 0; i < reversed.length; i++) {
+      (function(key) {
+        try {
+          var data = JSON.parse(localStorage.getItem(key));
+          if (!data) return;
+          var isActive = key === activeKey;
+          var d        = new Date(data.savedAt);
+          var dateStr  = d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+          var count    = (data.transactions || []).length;
+
+          var div = document.createElement('div');
+          div.className = 'session-item' + (isActive ? ' active-s' : '');
+          div.onclick   = function() { loadSession(key); };
+          div.innerHTML =
+            '<span style="font-size:1rem">' + (isActive ? '📂' : '📁') + '</span>' +
+            '<div class="session-info">' +
+              '<div class="session-name">' + esc(data.name) +
+                (isActive ? ' <span class="active-badge">ACTIVE</span>' : '') +
+              '</div>' +
+              '<div class="session-meta">' + count + ' transactions · ' + dateStr + '</div>' +
+            '</div>' +
+            '<button class="s-icon-btn del" onclick="deleteSession(\'' + key + '\', event)" title="Delete">🗑</button>';
+          container.appendChild(div);
+        } catch(e) {}
+      })(reversed[i]);
+    }
+  }
+
+  // ── Keyboard shortcuts ─────────────────────────────────
+  document.getElementById('priceInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') window.addTransaction();
+  });
+  document.getElementById('qtyInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('priceInput').focus();
+  });
+  document.getElementById('sessionNameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') window.saveSession();
+  });
+
+  // ── Init ───────────────────────────────────────────────
+  renderSessions();
+  render();
+})();
+</script>
+</body>
+</html>
